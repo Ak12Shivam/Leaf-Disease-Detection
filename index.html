@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Plant Disease Detection Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-inter transition-colors duration-300">
+  <!-- Navbar -->
+  <nav class="bg-green-700 dark:bg-green-800 text-white py-4 sticky top-0 z-10 shadow-md">
+    <div class="container mx-auto px-4 flex justify-between items-center">
+      <h1 class="text-2xl font-bold">Plant Disease Detection</h1>
+      <div class="flex items-center space-x-4">
+        <button id="theme-toggle" class="p-2 rounded-full hover:bg-green-600 dark:hover:bg-green-900 transition">
+          <svg id="sun-icon" class="w-6 h-6 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+          </svg>
+          <svg id="moon-icon" class="w-6 h-6 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 01 8.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="container mx-auto px-4 py-8">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- Upload and Prediction Panel -->
+      <div class="lg:col-span-2 bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+        <h2 class="text-2xl font-semibold mb-4">Analyze Plant Leaf</h2>
+        <div class="mb-6">
+          <label for="plant-image" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Upload Leaf Image (JPG or PNG)</label>
+          <input type="file" id="plant-image" accept=".jpg,.jpeg,.png" class="block w-full text-sm text-gray-500 dark:text-gray-400
+            file:mr-4 file:py-2 file:px-4
+            file:rounded-full file:border-0
+            file:text-sm file:font-semibold
+            file:bg-green-100 dark:file:bg-green-900 file:text-green-700 dark:file:text-green-300
+            hover:file:bg-green-200 dark:hover:file:bg-green-800 transition">
+        </div>
+        <button id="predict-btn" class="w-full bg-green-600 text-white font-semibold py-3 rounded-lg hover:bg-green-700 dark:hover:bg-green-500 transition duration-300">Predict Disease</button>
+
+        <!-- Error Message -->
+        <p id="error-message" class="hidden text-red-600 dark:text-red-400 mt-4 text-center"></p>
+
+        <!-- Loading Spinner -->
+        <div id="loading" class="hidden text-center mt-6">
+          <svg class="animate-spin h-8 w-8 text-green-600 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <p class="text-gray-600 dark:text-gray-400 mt-2">Analyzing...</p>
+        </div>
+
+        <!-- Result Section -->
+        <div id="result-section" class="hidden mt-6">
+          <h3 class="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Prediction Result</h3>
+          <img id="uploaded-image" class="w-full h-64 object-contain rounded-lg mb-4" alt="Uploaded Plant Image">
+          <p id="result-text" class="text-lg font-medium text-gray-700 dark:text-gray-300"></p>
+          <div id="confidence-chart" class="mt-4">
+            <canvas id="prediction-chart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- History Panel -->
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+        <h2 class="text-2xl font-semibold mb-4">Prediction History</h2>
+        <div id="history-list" class="space-y-4 max-h-96 overflow-y-auto"></div>
+      </div>
+    </div>
+
+    <!-- Stats Section -->
+    <div class="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-6">
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 text-center">
+        <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-200">Total Scans</h3>
+        <p id="total-scans" class="text-3xl font-bold text-green-600 dark:text-green-400">0</p>
+      </div>
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 text-center">
+        <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-200">Diseases Detected</h3>
+        <p id="diseases-detected" class="text-3xl font-bold text-green-600 dark:text-green-400">0</p>
+      </div>
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 text-center">
+        <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-200">Accuracy</h3>
+        <p class="text-3xl font-bold text-green-600 dark:text-green-400">95%</p>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-gray-800 dark:bg-gray-900 text-white py-6">
+    <div class="container mx-auto px-4 text-center">
+      <p>© 2025 Plant Disease Detection. Powered by AI Under in Your Work Innovations.</p>
+    </div>
+  </footer>
+
+  <script>
+    // Theme Toggle
+    const themeToggle = document.getElementById('theme-toggle');
+    const sunIcon = document.getElementById('sun-icon');
+    const moonIcon = document.getElementById('moon-icon');
+
+    themeToggle.addEventListener('click', () => {
+      document.documentElement.classList.toggle('dark');
+      sunIcon.classList.toggle('hidden');
+      moonIcon.classList.toggle('hidden');
+      localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+    });
+
+    // Load theme from localStorage
+    if (localStorage.getItem('theme') === 'dark') {
+      document.documentElement.classList.add('dark');
+      sunIcon.classList.remove('hidden');
+      moonIcon.classList.add('hidden');
+    }
+
+    // Prediction Logic
+    const fileInput = document.getElementById('plant-image');
+    const predictBtn = document.getElementById('predict-btn');
+    const loadingDiv = document.getElementById('loading');
+    const resultSection = document.getElementById('result-section');
+    const uploadedImage = document.getElementById('uploaded-image');
+    const resultText = document.getElementById('result-text');
+    const errorMessage = document.getElementById('error-message');
+    const historyList = document.getElementById('history-list');
+    const totalScans = document.getElementById('total-scans');
+    const diseasesDetected = document.getElementById('diseases-detected');
+    let scanCount = 0;
+    let diseaseCount = 0;
+    let predictionChart = null;
+
+    predictBtn.addEventListener('click', async () => {
+      // Reset UI
+      errorMessage.classList.add('hidden');
+      loadingDiv.classList.remove('hidden');
+      resultSection.classList.add('hidden');
+
+      if (!fileInput.files.length) {
+        errorMessage.textContent = 'Please upload a JPG or PNG image first!';
+        errorMessage.classList.remove('hidden');
+        loadingDiv.classList.add('hidden');
+        return;
+      }
+
+      // Validate file extension
+      const file = fileInput.files[0];
+      const validExtensions = ['.jpg', '.jpeg', '.png'];
+      const fileExt = file.name.toLowerCase().slice(file.name.lastIndexOf('.'));
+      if (!validExtensions.includes(fileExt)) {
+        errorMessage.textContent = 'Please upload a JPG or PNG image!';
+        errorMessage.classList.remove('hidden');
+        loadingDiv.classList.add('hidden');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('plant_image', file);
+
+      try {
+        const response = await fetch('/predict', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to get prediction');
+        }
+
+        const data = await response.json();
+        const [plant, disease] = data.result.split('-');
+
+        // Update UI
+        uploadedImage.src = URL.createObjectURL(fileInput.files[0]);
+        resultText.textContent = `This is a ${plant} leaf with ${disease}`;
+        resultSection.classList.remove('hidden');
+
+        // Update stats
+        scanCount++;
+        diseaseCount++;
+        totalScans.textContent = scanCount;
+        diseasesDetected.textContent = diseaseCount;
+
+        // Update history
+        const historyItem = document.createElement('div');
+        historyItem.className = 'p-4 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center space-x-4';
+        historyItem.innerHTML = `
+          <img src="${uploadedImage.src}" class="w-16 h-16 object-contain rounded">
+          <div>
+            <p class="font-medium">${plant} - ${disease}</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400">${new Date().toLocaleString()}</p>
+          </div>
+        `;
+        historyList.prepend(historyItem);
+
+        // Update chart
+        if (predictionChart) predictionChart.destroy();
+        const ctx = document.getElementById('prediction-chart').getContext('2d');
+        predictionChart = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: ['Bacterial Spot', 'Early Blight', 'Common Rust'],
+            datasets: [{
+              label: 'Confidence',
+              data: data.confidences,
+              backgroundColor: 'rgba(34, 197, 94, 0.6)',
+              borderColor: 'rgba(34, 197, 94, 1)',
+              borderWidth: 1
+            }]
+          },
+          options: {
+            scales: {
+              y: { beginAtZero: true, max: 1 }
+            },
+            plugins: {
+              legend: { display: false }
+            }
+          }
+        });
+      } catch (error) {
+        console.error('Error:', error);
+        errorMessage.textContent = error.message || 'Error predicting disease. Please try again.';
+        errorMessage.classList.remove('hidden');
+      } finally {
+        loadingDiv.classList.add('hidden');
+      }
+    });
+  </script>
+</body>
+</html>
